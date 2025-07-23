@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { Verify } from "../models/emailVerify.js";
 import { sendMail } from "../config/mailer.js";
+import axios from "axios";
 
 export const sendOTP = async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -32,7 +33,7 @@ export const sendOTP = async (req, res) => {
     await newOtp.save();
     await sendMail(email, otp);
     res.json({
-      status: "Success",
+      status: "success",
       message: `OTP generated for : ${email}`,
       email: email,
     });
@@ -99,8 +100,9 @@ export const login = async (req, res) => {
     const match = await bcrypt.compare(password, hashedPass);
     if (match) {
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+      console.log("Remember me is:",rememberMe)
       res.cookie("token", token, {
-        maxAge: rememberMe == "on" ? 10 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000,
+        maxAge: rememberMe ? 10 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
       });
@@ -156,21 +158,29 @@ export const linkLeetcode = async (req, res) => {
   if (!username) {
     return res.json({ status: "failed", message: "username missing!" });
   }
+  console.log(username, "recieved");
   const url = `https://leetscan.vercel.app/${username}`;
-  const existingUser = await User.findOne({leetcodeID: username})
-  if(existingUser)
-    {
-      return res.json({status:"failed",message:"Account already linked with another ID."})
-    }
+  console.log("Sending req at:", url);
+  const existingUser = await User.findOne({ leetcodeID: username });
+  if (existingUser) {
+    return res.json({
+      status: "failed",
+      message: "Account already linked with another ID.",
+    });
+  }
   try {
     const response = await fetch(url);
     const data = await response.json();
     if (data.error) {
-      return res.json({ status: "failed", message: "user doesnt exist or API error" });
+      return res.json({
+        status: "failed",
+        message: "user doesnt exist or API error",
+      });
     }
     const random = crypto.randomBytes(4).toString("hex");
     const uniqueID = "leetracer-" + random;
-    return res.json({status:"success",data, uniqueID: uniqueID});
+    console.log("Unique ID:", uniqueID);
+    return res.json({ status: "success", uniqueID: uniqueID });
   } catch (err) {
     return res.json({
       status: "failed",
@@ -180,44 +190,57 @@ export const linkLeetcode = async (req, res) => {
 };
 
 export const verifyLeetcode = async (req, res) => {
-  const { username, email, uniqueID } = req.body;
-  if (!username || !email || !uniqueID) {
+  const { username, uniqueID } = req.body;
+  const token = req.cookies.token;
+  if (!username || !uniqueID) {
     return res.json({ status: "failed", message: "details missing!" });
   }
   const url = `https://leetscan.vercel.app/${username}`;
   try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     const response = await fetch(url);
     const data = await response.json();
-    if(data.error)
-      {
-        return res.json({status:"failed",message:"something went wrong!"})
+    if (data.error) {
+      return res.json({ status: "failed", message: "something went wrong!" });
+    }
+    if (data.profile.aboutMe.includes(uniqueID)) {
+      const user = await User.findById(decoded.id);
+      if (user.leetcodeID === username) {
+        res.json({ status: "success", message: "Already Linked!" });
       }
-    if(data.aboutMe.includes(uniqueID))
-      {
-        const user = await User.findOne({email})
-        if(user.leetcodeID===username)
-          {
-            res.json({status:"success",message:"Already Linked!"})
-          }
-        if(!user.leetcodeID)
-          {
-            user.leetcodeID = username;
-            user.uniqueID = uniqueID;
-            await user.save();
-            return res.json({status:"success",message:"added leetcode ID"})
-          }
-        else
-        {
-          return res.json({status:"failed",message:"Add ID in summary of your leetcode account!"})
-        }
+      if (!user.leetcodeID) {
+        user.leetcodeID = username;
+        user.uniqueID = uniqueID;
+        await user.save();
+        return res.json({ status: "success", message: "added leetcode ID" });
+      } else {
+        return res.json({
+          status: "failed",
+          message: "Add ID in summary of your leetcode account!",
+        });
       }
-    else{
-      return res.json({status:"failed",message:"Summary doesnt contain the code!"})
+    } else {
+      return res.json({
+        status: "failed",
+        message: "Summary doesnt contain the code!",
+      });
     }
   } catch (err) {
     return res.json({
       status: "failed",
-      message: "User doesnt exist or API error, try again!",
+      message: err.message,
     });
   }
+};
+
+export const getData = async (req, res) => {
+  const { username } = req.body;
+  if (!username) {
+    return res.json({ status: "failed", message: "username required" });
+  }
+  const url = `https://leetscan.vercel.app/${username}`;
+  const response = await fetch(url);
+  const data = await response.json();
+  return res.json({ data });
 };

@@ -29,7 +29,11 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: ""
     },
+    data: 
+    {
+      type: Object,
 
+    },
   },
   {
     timestamps: true,

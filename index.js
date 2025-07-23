@@ -3,6 +3,7 @@ import { connectDB } from './config/connect.js'
 import dotenv from 'dotenv';
 import { userrouter } from './routes/user.js';
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 
 const app = express();
 const PORT = 8000;
@@ -10,7 +11,8 @@ const PORT = 8000;
 //middlewares
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
-app.use(cors({credentials:true}))
+app.use(cookieParser())
+app.use(cors({credentials:true, origin: process.env.NODE_ENV==="production"?"https://leetracer-frontend.vercel.app":"http://localhost:5173"}))
 
 dotenv.config({quiet:true});
 
