@@ -10,10 +10,10 @@ const app = express();
 const PORT = 8000;
 
 //middlewares
+app.use(cors({credentials:true, origin:["https://leetracer-frontend.vercel.app","http://localhost:5173"]}))
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
 app.use(cookieParser())
-app.use(cors({credentials:true, origin:["https://leetracer-frontend.vercel.app","http://localhost:5173"]}))
 
 dotenv.config({quiet:true});
 
