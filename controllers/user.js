@@ -105,7 +105,6 @@ export const login = async (req, res) => {
         maxAge: rememberMe ? 10 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "None",
       });
       return res.json({
         status: "success",

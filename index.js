@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { userrouter } from './routes/user.js';
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
+import { airouter } from './routes/ai.js';
 
 const app = express();
 const PORT = 8000;
@@ -23,6 +24,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/auth',userrouter)
+app.use('/ai',airouter)
 
 app.listen(PORT, () => {
     console.log(`Server started at : http://localhost:${PORT}`)
