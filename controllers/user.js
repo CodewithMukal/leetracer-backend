@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { Verify } from "../models/emailVerify.js";
 import { sendMail } from "../config/mailer.js";
-import axios from "axios";
+import fetch from "node-fetch";
 
 export const sendOTP = async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -70,7 +70,7 @@ export const createUser = async (req, res) => {
         maxAge: 10 * 24 * 60 * 60 * 1000,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite:"None"
+        sameSite: "None",
       });
       return res.json({
         status: "success",
@@ -101,12 +101,11 @@ export const login = async (req, res) => {
     const match = await bcrypt.compare(password, hashedPass);
     if (match) {
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-      console.log("Remember me is:",rememberMe)
       res.cookie("token", token, {
         maxAge: rememberMe ? 10 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite:"None"
+        sameSite: "None",
       });
       return res.json({
         status: "success",
@@ -160,9 +159,7 @@ export const linkLeetcode = async (req, res) => {
   if (!username) {
     return res.json({ status: "failed", message: "username missing!" });
   }
-  console.log(username, "recieved");
   const url = `https://leetscan.vercel.app/${username}`;
-  console.log("Sending req at:", url);
   const existingUser = await User.findOne({ leetcodeID: username });
   if (existingUser) {
     return res.json({
@@ -181,7 +178,6 @@ export const linkLeetcode = async (req, res) => {
     }
     const random = crypto.randomBytes(4).toString("hex");
     const uniqueID = "leetracer-" + random;
-    console.log("Unique ID:", uniqueID);
     return res.json({ status: "success", uniqueID: uniqueID });
   } catch (err) {
     return res.json({
@@ -236,6 +232,41 @@ export const verifyLeetcode = async (req, res) => {
   }
 };
 
+const formatData = (data) => {
+  let sendData = {
+      username: data.matchedUser.username,
+      totalSolved: data.matchedUser.submitStats.acSubmissionNum[0].count,
+      totalSubmissions: data.matchedUser.submitStats.totalSubmissionNum[0].count,
+      totalQuestions: data.allQuestionsCount[0].count,
+      easySolved: data.matchedUser.submitStats.acSubmissionNum[1].count,
+      totalEasy: data.allQuestionsCount[1].count,
+      mediumSolved: data.matchedUser.submitStats.acSubmissionNum[2].count,
+      totalMedium: data.allQuestionsCount[2].count,
+      hardSolved: data.matchedUser.submitStats.acSubmissionNum[3].count,
+      totalHard: data.allQuestionsCount[3].count,
+      ranking: data.matchedUser.profile.ranking,
+      contributionPoints: data.matchedUser.contributions.points,
+      reputation: data.matchedUser.profile.reputation,
+      submissionCalendar: JSON.parse(data.matchedUser.submissionCalendar),
+      recentSubmissions: data.recentSubmissionList,
+      profile: {
+          realName: data.matchedUser.profile.realName,
+          aboutMe: data.matchedUser.profile.aboutMe,
+          userAvatar: data.matchedUser.profile.userAvatar,
+          location: data.matchedUser.profile.location,
+          skillTags: data.matchedUser.profile.skillTags,
+          websites: data.matchedUser.profile.websites,
+          company: data.matchedUser.profile.company,
+          school: data.matchedUser.profile.school,
+          starRating: data.matchedUser.profile.starRating,
+      },
+      badges: data.matchedUser.badges,
+      contestRanking: data.userContestRanking,
+      submitStats: data.matchedUser.submitStats
+  };
+  return sendData;
+};
+
 export const getData = async (req, res) => {
   const { username } = req.body;
   if (!username) {
@@ -245,4 +276,183 @@ export const getData = async (req, res) => {
   const response = await fetch(url);
   const data = await response.json();
   return res.json({ data });
+};
+
+export const getLeetcodeData = async (req, res) => {
+  const { username } = req.body;
+
+  const userQuery = `
+    query getUserProfile($username: String!) {
+      allQuestionsCount {
+        difficulty
+        count
+      }
+      matchedUser(username: $username) {
+        username
+        contributions { points }
+        profile {
+          reputation
+          ranking
+          realName
+          aboutMe
+          userAvatar
+          location
+          skillTags
+          websites
+          company
+          school
+          starRating
+        }
+        submissionCalendar
+        submitStats {
+          acSubmissionNum {
+            difficulty
+            count
+            submissions
+          }
+          totalSubmissionNum {
+            difficulty
+            count
+            submissions
+          }
+        }
+        badges {
+          id
+          displayName
+          icon
+          creationDate
+        }
+      }
+      recentSubmissionList(username: $username, limit: 20) {
+        title
+        titleSlug
+        timestamp
+        statusDisplay
+        lang
+        runtime
+        memory
+        url
+      }
+      userContestRanking(username: $username) {
+        attendedContestsCount
+        rating
+        globalRanking
+        totalParticipants
+        topPercentage
+        badge {
+          name
+          icon
+        }
+      }
+    }
+  `;
+
+  const dailyChallengeQuery = `
+    query questionOfTodayV2 {
+      activeDailyCodingChallengeQuestion {
+        date
+        userStatus
+        link
+        question {
+          questionId
+          titleSlug
+          title
+          translatedTitle
+          questionFrontendId
+          isPaidOnly
+          difficulty
+          topicTags {
+            name
+            slug
+            translatedName
+          }
+          status
+          isFavor
+          acRate
+          freqBar
+        }
+      }
+    }
+  `;
+
+  try {
+    const [userRes, dailyRes] = await Promise.all([
+      fetch("https://leetcode.com/graphql", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Referer: "https://leetcode.com",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        },
+        body: JSON.stringify({ query: userQuery, variables: { username } }),
+      }),
+      fetch("https://leetcode.com/graphql", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Referer: "https://leetcode.com",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        },
+        body: JSON.stringify({
+          query: dailyChallengeQuery,
+          operationName: "questionOfTodayV2",
+          variables: {},
+        }),
+      }),
+    ]);
+
+    const userData = await userRes.json();
+    const dailyData = await dailyRes.json();
+
+    if (userData.errors) {
+      return res.status(400).json({
+        status: "failed",
+        message: "User not found or API error",
+        details: userData.errors,
+      });
+    }
+
+    const formattedUser = formatData(userData.data); // your existing formatter
+
+    const raw = dailyData?.data?.activeDailyCodingChallengeQuestion;
+    const question = raw?.question;
+    const formattedDaily = question
+      ? {
+          date: raw.date,
+          isCompleted: raw.userStatus === "FINISH",
+          title: question.title,
+          translatedTitle: question.translatedTitle || null,
+          id: question.questionFrontendId,
+          slug: question.titleSlug,
+          link: `https://leetcode.com${raw.link}`,
+          difficulty: question.difficulty,
+          isPaidOnly: question.isPaidOnly,
+          acRate: `${question.acRate.toFixed(2)}%`,
+          frequency: question.freqBar,
+          tags: question.topicTags.map((tag) => ({
+            name: tag.name,
+            slug: tag.slug,
+            translatedName: tag.translatedName || null,
+          })),
+          isFavorite: question.isFavor || false,
+        }
+      : null;
+
+    return res.json({
+      status: "success",
+      data: {
+        ...formattedUser,
+        dailyChallenge: formattedDaily,
+      },
+    });
+  } catch (err) {
+    console.error("Error:", err);
+    return res.status(500).json({
+      status: "failed",
+      message: "Internal server error",
+      details: err.message,
+    });
+  }
 };
