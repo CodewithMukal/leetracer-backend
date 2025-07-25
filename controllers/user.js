@@ -122,28 +122,33 @@ export const login = async (req, res) => {
 export const getInfo = async (req, res) => {
   try {
     const token = req.cookies.token;
+    if (!token) {
+      return res.status(401).json({ status: "failed", message: "Token missing" });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (!decoded) {
-      return res.json({ status: "failed", message: "invalid request" });
+      return res.status(401).json({ status: "failed", message: "Invalid token" });
     }
+
     const user = await User.findById(decoded.id);
     if (!user) {
-      return res.json({ status: "failed", message: "User doesnt exist" });
+      return res.status(404).json({ status: "failed", message: "User doesn't exist" });
     }
-    const email = user.email;
-    const fullName = user.fullName;
-    const leetcodeID = user.leetcodeID;
-    return res.json({
+
+    return res.status(200).json({
       status: "success",
       loggedIn: true,
-      email: email,
-      fullName: fullName,
-      leetcodeID: leetcodeID,
+      email: user.email,
+      fullName: user.fullName,
+      leetcodeID: user.leetcodeID,
     });
   } catch (err) {
-    return res.json({ status: "failed", message: `Error: ${err.message}` });
+    console.error("🔥 JWT error:", err.message);
+    return res.status(401).json({ status: "failed", message: `Error: ${err.message}` });
   }
 };
+
 
 export const logout = async (req, res) => {
   res.clearCookie("token", {
