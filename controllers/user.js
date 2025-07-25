@@ -86,6 +86,7 @@ export const createUser = async (req, res) => {
 
 export const login = async (req, res) => {
   const { email, password, rememberMe } = req.body;
+  console.log("Login Request Recieved by:",req.ip,"for login",email)
   if (!email || !password) {
     return res.json({ status: "failed", message: "Invalid Credentials" });
   }
