@@ -1,9 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
 
-// Optional: Load env variables (only if not already loaded elsewhere)
-import dotenv from "dotenv";
-dotenv.config();
-
 export const generateRecomendation = async (req, res) => {
   try {
     // Log for debugging

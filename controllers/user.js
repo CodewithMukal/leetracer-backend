@@ -70,7 +70,7 @@ export const createUser = async (req, res) => {
         maxAge: 10 * 24 * 60 * 60 * 1000,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "None",
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
       });
       return res.json({
         status: "success",
@@ -86,35 +86,59 @@ export const createUser = async (req, res) => {
 
 export const login = async (req, res) => {
   const { email, password, rememberMe } = req.body;
-  console.log("Login Request Recieved by:",req.ip,"for login",email)
+  console.log("📩 Login Request Received:");
+  console.log("  📍 IP:", req.ip);
+  console.log("  📧 Email:", email);
+  console.log("  🔒 Remember Me:", rememberMe);
+  console.log("Node Enviornment:", process.env.NODE_ENV);
+
   if (!email || !password) {
+    console.warn("❌ Missing email or password");
     return res.json({ status: "failed", message: "Invalid Credentials" });
   }
+
   try {
     const user = await User.findOne({ email });
+
     if (!user) {
+      console.warn("❌ User not found:", email);
       return res.json({
         status: "failed",
         message: "User not found, Signup first",
       });
     }
+
     const hashedPass = user.password;
     const match = await bcrypt.compare(password, hashedPass);
-    if (match) {
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-      res.cookie("token", token, {
-        maxAge: rememberMe ? 10 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-      });
-      return res.json({
-        status: "success",
-        message: "User login successfully!",
-      });
-    } else {
+
+    if (!match) {
+      console.warn("❌ Invalid password for:", email);
       return res.json({ status: "failed", message: "Invalid Password" });
     }
+
+    // ✅ Password matched
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+
+    console.log("🔑 JWT Token Generated:", token.slice(0, 20) + "...");
+
+    // Cookie settings
+    const cookieOptions = {
+      maxAge: rememberMe ? 10 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000, // 10d or 1h
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    };
+
+    res.cookie("token", token, cookieOptions);
+    console.log("🍪 Cookie Set with Options:", cookieOptions);
+
+    return res.json({
+      status: "success",
+      message: "User login successfully!",
+    });
   } catch (err) {
+    console.error("🔥 Error in login:", err.message);
     return res.json({ status: "failed", message: `Error: ${err.message}` });
   }
 };
@@ -123,17 +147,23 @@ export const getInfo = async (req, res) => {
   try {
     const token = req.cookies.token;
     if (!token) {
-      return res.status(401).json({ status: "failed", message: "Token missing" });
+      return res
+        .status(401)
+        .json({ status: "failed", message: "Token missing" });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (!decoded) {
-      return res.status(401).json({ status: "failed", message: "Invalid token" });
+      return res
+        .status(401)
+        .json({ status: "failed", message: "Invalid token" });
     }
 
     const user = await User.findById(decoded.id);
     if (!user) {
-      return res.status(404).json({ status: "failed", message: "User doesn't exist" });
+      return res
+        .status(404)
+        .json({ status: "failed", message: "User doesn't exist" });
     }
 
     return res.status(200).json({
@@ -145,10 +175,11 @@ export const getInfo = async (req, res) => {
     });
   } catch (err) {
     console.error("🔥 JWT error:", err.message);
-    return res.status(401).json({ status: "failed", message: `Error: ${err.message}` });
+    return res
+      .status(401)
+      .json({ status: "failed", message: `Error: ${err.message}` });
   }
 };
-
 
 export const logout = async (req, res) => {
   res.clearCookie("token", {
@@ -239,35 +270,35 @@ export const verifyLeetcode = async (req, res) => {
 
 const formatData = (data) => {
   let sendData = {
-      username: data.matchedUser.username,
-      totalSolved: data.matchedUser.submitStats.acSubmissionNum[0].count,
-      totalSubmissions: data.matchedUser.submitStats.totalSubmissionNum[0].count,
-      totalQuestions: data.allQuestionsCount[0].count,
-      easySolved: data.matchedUser.submitStats.acSubmissionNum[1].count,
-      totalEasy: data.allQuestionsCount[1].count,
-      mediumSolved: data.matchedUser.submitStats.acSubmissionNum[2].count,
-      totalMedium: data.allQuestionsCount[2].count,
-      hardSolved: data.matchedUser.submitStats.acSubmissionNum[3].count,
-      totalHard: data.allQuestionsCount[3].count,
-      ranking: data.matchedUser.profile.ranking,
-      contributionPoints: data.matchedUser.contributions.points,
-      reputation: data.matchedUser.profile.reputation,
-      submissionCalendar: JSON.parse(data.matchedUser.submissionCalendar),
-      recentSubmissions: data.recentSubmissionList,
-      profile: {
-          realName: data.matchedUser.profile.realName,
-          aboutMe: data.matchedUser.profile.aboutMe,
-          userAvatar: data.matchedUser.profile.userAvatar,
-          location: data.matchedUser.profile.location,
-          skillTags: data.matchedUser.profile.skillTags,
-          websites: data.matchedUser.profile.websites,
-          company: data.matchedUser.profile.company,
-          school: data.matchedUser.profile.school,
-          starRating: data.matchedUser.profile.starRating,
-      },
-      badges: data.matchedUser.badges,
-      contestRanking: data.userContestRanking,
-      submitStats: data.matchedUser.submitStats
+    username: data.matchedUser.username,
+    totalSolved: data.matchedUser.submitStats.acSubmissionNum[0].count,
+    totalSubmissions: data.matchedUser.submitStats.totalSubmissionNum[0].count,
+    totalQuestions: data.allQuestionsCount[0].count,
+    easySolved: data.matchedUser.submitStats.acSubmissionNum[1].count,
+    totalEasy: data.allQuestionsCount[1].count,
+    mediumSolved: data.matchedUser.submitStats.acSubmissionNum[2].count,
+    totalMedium: data.allQuestionsCount[2].count,
+    hardSolved: data.matchedUser.submitStats.acSubmissionNum[3].count,
+    totalHard: data.allQuestionsCount[3].count,
+    ranking: data.matchedUser.profile.ranking,
+    contributionPoints: data.matchedUser.contributions.points,
+    reputation: data.matchedUser.profile.reputation,
+    submissionCalendar: JSON.parse(data.matchedUser.submissionCalendar),
+    recentSubmissions: data.recentSubmissionList,
+    profile: {
+      realName: data.matchedUser.profile.realName,
+      aboutMe: data.matchedUser.profile.aboutMe,
+      userAvatar: data.matchedUser.profile.userAvatar,
+      location: data.matchedUser.profile.location,
+      skillTags: data.matchedUser.profile.skillTags,
+      websites: data.matchedUser.profile.websites,
+      company: data.matchedUser.profile.company,
+      school: data.matchedUser.profile.school,
+      starRating: data.matchedUser.profile.starRating,
+    },
+    badges: data.matchedUser.badges,
+    contestRanking: data.userContestRanking,
+    submitStats: data.matchedUser.submitStats,
   };
   return sendData;
 };
