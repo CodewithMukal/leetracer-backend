@@ -522,7 +522,7 @@ export const unlinkLeetcode = async (req,res) =>
   }
 export const changeUsername = async (req,res) => 
   {
-    const {fullName} = req.body
+    const { fullName } = req.body
     if(!fullName)
       {
         return res.json({status:"failed",message:"Missing field"})
