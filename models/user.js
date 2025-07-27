@@ -34,25 +34,25 @@ const userSchema = new mongoose.Schema(
       type: Object,
 
     },
-    friends:[
+    friends: [
       {
-        fullName:{
-          type:String,
-          required:true,
-        },
-        leetcodeID:{
-          type:String,
-          required:true,
-        },
-        createdAt:{
-          type:Date,
-          default: Date.now()
-        }
-      }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
     ],
-    sentReq:[
-      
-    ]
+    sentReq: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    recReq: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    
   },
   {
     timestamps: true,
