@@ -492,3 +492,63 @@ export const getLeetcodeData = async (req, res) => {
     });
   }
 };
+
+export const unlinkLeetcode = async (req,res) => 
+  {
+    const token = req.cookies.token
+    if(!token)
+      {
+        return res.json({status:"failed",message:"Token not found"});
+      }
+    try{
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if(!decoded)
+        {
+          return res.json({status:"failed",message:"Cant verify ID"})
+        }
+      const user = await User.findById(decoded.id)
+      if(!user)
+        {
+          return res.json({status:"failed",message:"User not found!"})
+        }
+      user.leetcodeID = "";
+      await user.save();
+      return res.json({status:"success",message:"Leetcode ID unlinked"})
+    }
+    catch(err)
+    {
+      return res.json({status:"failed",message:"Some error occured, try again later..."})
+    }
+  }
+export const changeUsername = async (req,res) => 
+  {
+    const {fullName} = req.body
+    if(!fullName)
+      {
+        return res.json({status:"failed",message:"Missing field"})
+      }
+    const token = req.cookies.token
+    if(!token)
+      {
+        return res.json({status:"failed",message:"Token not found"});
+      }
+    try{
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if(!decoded)
+        {
+          return res.json({status:"failed",message:"Cant verify ID"})
+        }
+      const user = await User.findById(decoded.id)
+      if(!user)
+        {
+          return res.json({status:"failed",message:"User not found!"})
+        }
+      user.fullName = fullName;
+      await user.save();
+      return res.json({status:"success",message:"Full Name Updated!"})
+    }
+    catch(err)
+    {
+      return res.json({status:"failed",message:"Some error occured, try again later..."})
+    }
+  }

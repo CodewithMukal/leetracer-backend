@@ -1,5 +1,5 @@
 import express from 'express'
-import { createUser, getData, getInfo, getLeetcodeData, linkLeetcode, login, logout, sendOTP, verifyLeetcode } from '../controllers/user.js';
+import { createUser,unlinkLeetcode, getData, getInfo, getLeetcodeData, linkLeetcode, login, logout, sendOTP, verifyLeetcode } from '../controllers/user.js';
 
 export const userrouter = express.Router();
 
@@ -15,3 +15,4 @@ userrouter.post('/linkLeetcode',linkLeetcode)
 userrouter.post('/checkLeetcode', verifyLeetcode)
 userrouter.post("/getData", getData)
 userrouter.post("/allData", getLeetcodeData)
+userrouter.post('/unlink-leetcode',unlinkLeetcode)

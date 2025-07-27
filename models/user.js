@@ -34,6 +34,25 @@ const userSchema = new mongoose.Schema(
       type: Object,
 
     },
+    friends:[
+      {
+        fullName:{
+          type:String,
+          required:true,
+        },
+        leetcodeID:{
+          type:String,
+          required:true,
+        },
+        createdAt:{
+          type:Date,
+          default: Date.now()
+        }
+      }
+    ],
+    sentReq:[
+      
+    ]
   },
   {
     timestamps: true,
