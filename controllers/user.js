@@ -172,6 +172,7 @@ export const getInfo = async (req, res) => {
       email: user.email,
       fullName: user.fullName,
       leetcodeID: user.leetcodeID,
+      uid: user._id
     });
   } catch (err) {
     console.error("🔥 JWT error:", err.message);
@@ -552,3 +553,4 @@ export const changeUsername = async (req,res) =>
       return res.json({status:"failed",message:"Some error occured, try again later..."})
     }
   }
+

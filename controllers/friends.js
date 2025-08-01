@@ -1,0 +1,194 @@
+import { User } from "../models/user.js";
+import jwt from "jsonwebtoken";
+
+export const incomingRequests = async (req, res) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.json({ status: "failed", message: "Not logged in" });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded) {
+      return res.json({ status: "failed", message: "Error!" });
+    }
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.json({ status: "failed", message: "User not found!" });
+    }
+    const requests = user.recReq;
+    return res.json({ status: "success", requests: requests });
+  } catch (err) {
+    return res.json({ status: "failed", message: err.message });
+  }
+};
+export const acceptReq = async (req, res) => {
+  const token = req.cookies.token;
+  const { UID } = req.body;
+  if (!token) {
+    return res.json({ status: "failed", message: "Not logged in" });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded) {
+      return res.json({ status: "failed", message: "Error!" });
+    }
+    if (UID == decoded.id) {
+      return res.json({
+        status: "failed",
+        message: "Cant send request to yourself.",
+      });
+    }
+    const user = await User.findById(decoded.id);
+    const friend = await User.findById(UID);
+    if (!user) {
+      return res.json({ status: "failed", message: "User not found!" });
+    }
+    if (!friend) {
+      return res.json({ status: "failed", message: "Friend not found!" });
+    }
+    if (!user.friends.includes(UID)) {
+      user.friends.push(UID);
+    }
+    if (!friend.friends.includes(user._id.toString())) {
+      friend.friends.push(user._id);
+    }
+
+    const index = user.recReq.indexOf(UID);
+    if (index > -1) user.recReq.splice(index, 1);
+
+    await user.save();
+    await friend.save();
+
+    const sender = await User.findById(UID);
+    if (sender) {
+      const sentIndex = sender.sentReq.indexOf(user._id.toString());
+      if (sentIndex > -1) sender.sentReq.splice(sentIndex, 1);
+      await sender.save();
+    }
+    return res.json({ status: "success", message: "User added in Friends" });
+  } catch (err) {
+    return res.json({ status: "failed", message: err.message });
+  }
+};
+
+export const rejectReq = async (req, res) => {
+  const token = req.cookies.token;
+  const { UID } = req.body;
+  if (!token) {
+    return res.json({ status: "failed", message: "Not logged in" });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded) {
+      return res.json({ status: "failed", message: "Error!" });
+    }
+    if (UID == decoded.id) {
+      return res.json({
+        status: "failed",
+        message: "Cant send request to yourself.",
+      });
+    }
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.json({ status: "failed", message: "User not found!" });
+    }
+    const index = user.recReq.indexOf(UID);
+    user.recReq.splice(index, 1);
+    const sender = await User.findById(UID);
+    if (sender) {
+      const sentIndex = sender.sentReq.indexOf(user._id.toString());
+      if (sentIndex > -1) sender.sentReq.splice(sentIndex, 1);
+      await sender.save();
+    }
+    return res.json({ status: "success", message: "User request removed" });
+  } catch (err) {
+    return res.json({ status: "failed", message: err.message });
+  }
+};
+
+export const sendReq = async (req, res) => {
+  const token = req.cookies.token;
+  const { UID } = req.body;
+  if (!token) {
+    return res.json({ status: "failed", message: "Not logged in" });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded) {
+      return res.json({ status: "failed", message: "Error!" });
+    }
+    if (UID == decoded.id) {
+      return res.json({
+        status: "failed",
+        message: "Cant send request to yourself.",
+      });
+    }
+    const user = await User.findById(decoded.id);
+    const friend = await User.findById(UID);
+    if (!user) {
+      return res.json({ status: "failed", message: "User not found!" });
+    }
+    if (!friend) {
+      return res.json({ status: "failed", message: "Friend not found!" });
+    }
+    if (
+      user.sentReq.includes(UID) ||
+      friend.recReq.includes(user._id.toString())
+    ) {
+      return res.json({ status: "failed", message: "Request already sent!" });
+    }
+
+    user.sentReq.push(UID);
+    friend.recReq.push(user._id);
+
+    await user.save();
+    await friend.save();
+    return res.json({ status: "success", message: "Request Sent!" });
+  } catch (err) {
+    return res.json({ status: "failed", message: err.message });
+  }
+};
+
+export const getFriends = async (req, res) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.json({ status: "failed", message: "Not logged in" });
+  }
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  if (!decoded) {
+    return res.json({ status: "failed", message: "Unable to verify" });
+  }
+  const user = await User.findById(decoded.id);
+  if (!user) {
+    return res.json({ status: "failed", message: "User doesnt exist!" });
+  }
+  const friends = user.friends;
+  return res.json({ status: "success", friends: friends });
+};
+
+const baseUrl =
+  process.env.NODE_ENV === "production"
+    ? "https://leetracer-backend.onrender.com"
+    : "http://localhost:8000";
+
+export const getFriendInfo = async (req, res) => {
+  const { UID } = req.body;
+  const friend = await User.findById(UID);
+  if (!friend) {
+    return res.json({ status: "failed", message: "Friend doesn't exist" });
+  }
+  const response = await fetch(`${baseUrl}/auth/allData`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({username:friend.leetcodeID}),
+  });
+  const data = await response.json();
+  return res.json({
+    status: "success",
+    fullName: friend.fullName,
+    leetcodeID: friend.leetcodeID,
+    data: data,
+  });
+};

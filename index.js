@@ -1,10 +1,12 @@
 import express from 'express'
-import { connectDB } from './config/connect.js'
 import dotenv from 'dotenv';
-import { userrouter } from './routes/user.js';
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
+import { connectDB } from './config/connect.js'
+import { userrouter } from './routes/user.js';
+import { friendRouter } from './routes/friends.js';
 import { airouter } from './routes/ai.js';
+
 
 const app = express();
 const PORT = 8000;
@@ -25,6 +27,7 @@ app.get('/', (req, res) => {
 
 app.use('/auth',userrouter)
 app.use('/ai',airouter)
+app.use('/friends',friendRouter)
 
 app.listen(PORT, () => {
     console.log(`Server started at : http://localhost:${PORT}`)
