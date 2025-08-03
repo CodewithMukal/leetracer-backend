@@ -124,6 +124,10 @@ export const sendReq = async (req, res) => {
       });
     }
     const user = await User.findById(decoded.id);
+    if(user.friends.includes(UID))
+      {
+        return res.json({status:"failed",message:"Already friends with user!"})
+      }
     const friend = await User.findById(UID);
     if (!user) {
       return res.json({ status: "failed", message: "User not found!" });

@@ -3,4 +3,4 @@ import { handleSearch } from "../controllers/search.js"
 
 export const searchRouter = express.Router()
 
-searchRouter.post("/:query",handleSearch)
+searchRouter.post("/",handleSearch)
