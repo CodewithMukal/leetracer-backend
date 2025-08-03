@@ -317,7 +317,7 @@ export const getData = async (req, res) => {
 
 export const getLeetcodeData = async (req, res) => {
   const { username } = req.body;
-
+  console.log("Username is:",username)
   const userQuery = `
     query getUserProfile($username: String!) {
       allQuestionsCount {
@@ -440,6 +440,15 @@ export const getLeetcodeData = async (req, res) => {
       }),
     ]);
 
+    if (!userRes.ok) {
+      const text = await userRes.text(); // so we can debug the response
+      console.error("LeetCode userRes failed:", text);
+      return res.status(500).json({
+        status: "failed",
+        message: "LeetCode user request failed",
+      });
+    }
+    
     const userData = await userRes.json();
     const dailyData = await dailyRes.json();
 

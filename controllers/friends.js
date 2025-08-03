@@ -173,6 +173,7 @@ const baseUrl =
 
 export const getFriendInfo = async (req, res) => {
   const { UID } = req.body;
+  console.log("UID received:",UID)
   const friend = await User.findById(UID);
   if (!friend) {
     return res.json({ status: "failed", message: "Friend doesn't exist" });

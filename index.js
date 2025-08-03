@@ -6,13 +6,14 @@ import { connectDB } from './config/connect.js'
 import { userrouter } from './routes/user.js';
 import { friendRouter } from './routes/friends.js';
 import { airouter } from './routes/ai.js';
+import { searchRouter } from './routes/search.js';
 
 
 const app = express();
 const PORT = 8000;
 
 //middlewares
-app.use(cors({credentials:true, origin:["https://leetracer-frontend.vercel.app","http://localhost:5173","http://192.168.1.41:5173"]}))
+app.use(cors({credentials:true, origin:["https://leetracer-frontend.vercel.app","http://localhost:5173","http://192.168.31.254:5173"]}))
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
 app.use(cookieParser())
@@ -28,6 +29,7 @@ app.get('/', (req, res) => {
 app.use('/auth',userrouter)
 app.use('/ai',airouter)
 app.use('/friends',friendRouter)
+app.use('/search', searchRouter)
 
 app.listen(PORT, () => {
     console.log(`Server started at : http://localhost:${PORT}`)
