@@ -199,45 +199,36 @@ export const getFriendInfo = async (req, res) => {
   });
 };
 
-export const removeFriend = async (req,res)=> 
-  {
-    const token = req.cookies.token
-    const {UID} = req.body
-    if(!token)
-      {
-        return res.json({status:"failed",message:"User not logged In!"})
-      }
-    if(!UID)
-      {
-        return res.json({status:"failed",message:"Friend UID needed!"})
-      }
-    try
-    {
-      const decoded = jwt.verify(token,process.env.JWT_SECRET)
-      if(!decoded)
-        {
-          return res.json({status:"failed",message:"Unable to decode JWT!"})
-        }
-      const user = await User.findById(decoded.id)
-      const friend = await User.findById(UID)
-      if(!user)
-        {
-          return res.json({status:"failed",message:"User doesnt exist!"})
-        }
-      if(!friend)
-        {
-          return res.json({status:"failed",message:"Cant find friend!"})
-        }
-      const removeInd = user.friends.indexOf(UID);
-      user.friends.splice(removeInd,1);
-      const removeInd2 = friend.friends.indexOf(decoded.id);
-      friend.friends.splice(removeInd2,1)
-      await friend.save();
-      await user.save();
-      return res.json({status:"success",message:`Removed ${UID} from ${decoded.id}`})
-    }
-    catch(err)
-    {
-      return res.json({status:"failed",message:err.message})
-    }
+export const removeFriend = async (req, res) => {
+  const token = req.cookies.token;
+  const { UID } = req.body;
+
+  if (!token) return res.json({ status: "failed", message: "User not logged in!" });
+  if (!UID) return res.json({ status: "failed", message: "Friend UID needed!" });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded) return res.json({ status: "failed", message: "Unable to decode JWT!" });
+
+    const user = await User.findById(decoded.id);
+    const friend = await User.findById(UID);
+
+    if (!user) return res.json({ status: "failed", message: "User doesn't exist!" });
+    if (!friend) return res.json({ status: "failed", message: "Can't find friend!" });
+
+    // Ensure arrays exist
+    user.friends = user.friends || [];
+    friend.friends = friend.friends || [];
+
+    // Remove friend from both lists
+    user.friends = user.friends.filter(f => f.toString() !== UID);
+    friend.friends = friend.friends.filter(f => f.toString() !== decoded.id);
+
+    await friend.save();
+    await user.save();
+
+    return res.json({ status: "success", message: `Removed ${UID} from ${decoded.id}` });
+  } catch (err) {
+    return res.json({ status: "failed", message: err.message });
   }
+};
