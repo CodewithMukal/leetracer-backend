@@ -1,5 +1,5 @@
 import express from 'express'
-import { acceptReq, getFriendInfo, getFriends, incomingRequests, rejectReq, sendReq } from '../controllers/friends.js'
+import { acceptReq, getFriendInfo, getFriends, incomingRequests, rejectReq, removeFriend, sendReq } from '../controllers/friends.js'
 
 
 
@@ -11,3 +11,4 @@ friendRouter.post("/acceptReq",acceptReq)
 friendRouter.post("/rejectReq",rejectReq)
 friendRouter.post("/getInfo",getFriendInfo)
 friendRouter.post("/sendRequest",sendReq)
+friendRouter.post("/removeFriend",removeFriend)

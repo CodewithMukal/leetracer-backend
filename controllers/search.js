@@ -21,6 +21,7 @@ export const handleSearch = async (req, res) => {
     const users = await User.find({
         $and: [
           { leetcodeID: { $ne: user } },
+          {leetcodeID: {$ne: ""}},
           { $or: orConditions }
         ]
       });

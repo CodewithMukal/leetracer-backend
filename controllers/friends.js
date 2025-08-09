@@ -100,6 +100,7 @@ export const rejectReq = async (req, res) => {
       if (sentIndex > -1) sender.sentReq.splice(sentIndex, 1);
       await sender.save();
     }
+    await user.save();
     return res.json({ status: "success", message: "User request removed" });
   } catch (err) {
     return res.json({ status: "failed", message: err.message });
@@ -197,3 +198,46 @@ export const getFriendInfo = async (req, res) => {
     data: data,
   });
 };
+
+export const removeFriend = async (req,res)=> 
+  {
+    const token = req.cookies.token
+    const {UID} = req.body
+    if(!token)
+      {
+        return res.json({status:"failed",message:"User not logged In!"})
+      }
+    if(!UID)
+      {
+        return res.json({status:"failed",message:"Friend UID needed!"})
+      }
+    try
+    {
+      const decoded = jwt.verify(token,process.env.JWT_SECRET)
+      if(!decoded)
+        {
+          return res.json({status:"failed",message:"Unable to decode JWT!"})
+        }
+      const user = await User.findById(decoded.id)
+      const friend = await User.findById(UID)
+      if(!user)
+        {
+          return res.json({status:"failed",message:"User doesnt exist!"})
+        }
+      if(!friend)
+        {
+          return res.json({status:"failed",message:"Cant find friend!"})
+        }
+      const removeInd = user.friends.indexOf(UID);
+      user.friends.splice(removeInd,1);
+      const removeInd2 = friend.friends.indexOf(decoded.id);
+      friend.friends.splice(removeInd2,1)
+      await friend.save();
+      await user.save();
+      return res.json({status:"success",message:`Removed ${UID} from ${decoded.id}`})
+    }
+    catch(err)
+    {
+      return res.json({status:"failed",message:err.message})
+    }
+  }
